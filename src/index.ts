@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express'
 import cors from 'cors'
 import { TAccountDB, TAccountDBPost, TUserDB, TUserDBPost } from './types'
 import { db } from './database/knex'
+import { User } from './database/models/user'
 
 const app = express()
 
@@ -44,7 +45,15 @@ app.get("/users", async (req: Request, res: Response) => {
             usersDB = result
         }
 
-        res.status(200).send(usersDB)
+        const users:User[] = usersDB.map((userDB) =>new User(
+            userDB.id,
+            userDB.name,
+            userDB.email,
+            userDB.password,
+            userDB.created_at
+        ))
+
+        res.status(200).send(users)
     } catch (error) {
         console.log(error)
 
@@ -91,14 +100,31 @@ app.post("/users", async (req: Request, res: Response) => {
             throw new Error("'id' já existe")
         }
 
-        const newUser: TUserDBPost = {
+        // const newUser: TUserDBPost = {
+        //     id,
+        //     name,
+        //     email,
+        //     password
+        // }
+
+        //adicionando um novo usuario, so que por causa do createdat tem que usar esse new date, ai tem q fazer dessa forma, pra dps criar o newuserdb, que chama as funcoes e adiciona.
+        const newUser = new User(
             id,
             name,
             email,
-            password
+            password,
+            new Date().toISOString()
+        )
+
+        const newUserDb: TUserDB = {
+            id: newUser.getId(),
+            name: newUser.getName(),
+            email: newUser.getEmail(),
+            password: newUser.getPassword(),
+            created_at: newUser.getCreatedAt()
         }
 
-        await db("users").insert(newUser)
+        await db("users").insert(newUserDb)
         const [ userDB ]: TUserDB[] = await db("users").where({ id })
 
         res.status(201).send(userDB)
@@ -246,3 +272,8 @@ app.put("/accounts/:id/balance", async (req: Request, res: Response) => {
         }
     }
 })
+
+const user1 = new User("001", "João", "joao123@gmail.com", "1234","17/04/2023")
+console.log(user1.getId())
+user1.setId("002")
+console.log(user1.getId())
